@@ -5,11 +5,16 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestCLIParse(t *testing.T) {
+	defaultTimeout := 100 * time.Millisecond
 	assert := func(args []string, expected CLI) {
 		expected.In = os.Stdin
+		if expected.Timeout == 0 {
+			expected.Timeout = defaultTimeout
+		}
 		c := &CLI{In: os.Stdin}
 		c.FlagParse(args, true)
 

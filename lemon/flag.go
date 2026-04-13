@@ -65,7 +65,7 @@ func (c *CLI) getCommandType(args []string) (s CommandStyle, err error) {
 		}
 	}
 
-	return s, fmt.Errorf("Unknown SubCommand\n\n" + Usage)
+	return s, fmt.Errorf("%s", "Unknown SubCommand\n\n"+Usage)
 }
 
 func (c *CLI) flags() *flag.FlagSet {
