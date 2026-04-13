@@ -3,6 +3,7 @@ package lemon
 import (
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -200,4 +201,25 @@ func TestCLIParse(t *testing.T) {
 		NoFallbackMessages: true,
 		LogLevel:           defaultLogLevel,
 	})
+}
+
+func TestCopyStdinTrimNewline(t *testing.T) {
+	cases := []struct {
+		input    string
+		expected string
+	}{
+		{"hello\n", "hello"},
+		{"hello", "hello"},
+		{"/home/user/project\n", "/home/user/project"},
+		{"line1\nline2\n", "line1\nline2"},
+		{"line1\nline2\n\n", "line1\nline2\n"},
+	}
+
+	for _, tc := range cases {
+		c := &CLI{In: strings.NewReader(tc.input)}
+		c.FlagParse([]string{"lemonade", "copy"}, true)
+		if c.DataSource != tc.expected {
+			t.Errorf("input %q: expected DataSource %q, got %q", tc.input, tc.expected, c.DataSource)
+		}
+	}
 }

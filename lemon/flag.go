@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/mitchellh/go-homedir"
@@ -121,7 +122,7 @@ func (c *CLI) parse(args []string, skip bool) error {
 		if err != nil {
 			return err
 		}
-		c.DataSource = string(b)
+		c.DataSource = strings.TrimSuffix(string(b), "\n")
 	}
 
 	return nil
