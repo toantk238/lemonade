@@ -49,4 +49,5 @@ type CLI struct {
 	Help bool
 
 	NoFallbackMessages bool
+	TrimNewline        bool
 }

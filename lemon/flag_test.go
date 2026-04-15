@@ -222,9 +222,28 @@ func TestCopyStdinTrimNewline(t *testing.T) {
 
 	for _, tc := range cases {
 		c := &CLI{In: strings.NewReader(tc.input)}
-		c.FlagParse([]string{"lemonade", "copy"}, true)
+		c.FlagParse([]string{"lemonade", "copy", "--trim-newline"}, true)
 		if c.DataSource != tc.expected {
 			t.Errorf("input %q: expected DataSource %q, got %q", tc.input, tc.expected, c.DataSource)
+		}
+	}
+}
+
+func TestCopyStdinNoTrimByDefault(t *testing.T) {
+	cases := []struct {
+		input string
+	}{
+		{"hello\n"},
+		{"hello"},
+		{"/home/user/project\n"},
+		{"line1\nline2\n"},
+	}
+
+	for _, tc := range cases {
+		c := &CLI{In: strings.NewReader(tc.input)}
+		c.FlagParse([]string{"lemonade", "copy"}, true)
+		if c.DataSource != tc.input {
+			t.Errorf("input %q: expected DataSource to be unchanged, got %q", tc.input, c.DataSource)
 		}
 	}
 }

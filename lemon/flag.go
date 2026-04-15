@@ -78,6 +78,7 @@ func (c *CLI) flags() *flag.FlagSet {
 	flags.BoolVar(&c.TransLocalfile, "trans-localfile", true, "Translate local file")
 	flags.StringVar(&c.LineEnding, "line-ending", "", "Convert Line Endings (CR/CRLF)")
 	flags.BoolVar(&c.NoFallbackMessages, "no-fallback-messages", false, "Do not show fallback messages")
+	flags.BoolVar(&c.TrimNewline, "trim-newline", false, "Trim trailing newline from stdin input")
 	flags.DurationVar(&c.Timeout, "rpc-timeout", 100*time.Millisecond, "RPC timeout")
 	flags.IntVar(&c.LogLevel, "log-level", 1, "Log level")
 	return flags
@@ -122,7 +123,10 @@ func (c *CLI) parse(args []string, skip bool) error {
 		if err != nil {
 			return err
 		}
-		c.DataSource = strings.TrimSuffix(string(b), "\n")
+		c.DataSource = string(b)
+		if c.TrimNewline {
+			c.DataSource = strings.TrimSuffix(c.DataSource, "\n")
+		}
 	}
 
 	return nil
