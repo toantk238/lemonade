@@ -15,7 +15,10 @@ var connCh = make(chan net.Conn, 1)
 
 var LineEndingOpt string
 
+var serverLogger = log.New()
+
 func Serve(c *lemon.CLI, logger log.Logger) error {
+	serverLogger = logger
 	port := c.Port
 	allowIP := c.Allow
 	LineEndingOpt = c.LineEnding
@@ -51,6 +54,7 @@ func Serve(c *lemon.CLI, logger log.Logger) error {
 // ServeLocal is for fall back when lemonade client can't connect to server.
 // returns port number, error
 func ServeLocal(logger log.Logger) (int, error) {
+	serverLogger = logger
 	l, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return 0, err
