@@ -33,12 +33,12 @@ func saveToTemp(f param.FileEntry) (string, error) {
 			}
 		}
 	}
-	return path, os.WriteFile(path, f.Bytes, 0644)
+	return path, os.WriteFile(path, f.Bytes, 0600)
 }
 
 func main() {
-	fi, _ := os.Stdin.Stat()
-	stdinIsTTY := (fi.Mode() & os.ModeCharDevice) != 0
+	fi, err := os.Stdin.Stat()
+	stdinIsTTY := err == nil && (fi.Mode()&os.ModeCharDevice) != 0
 
 	cli := &lemon.CLI{
 		In:         os.Stdin,
@@ -66,8 +66,10 @@ func Do(c *lemon.CLI, args []string) int {
 		return lemon.Help
 	}
 
-	if clientID, err := lemon.LoadOrCreateClientID(); err == nil {
-		c.ClientID = clientID
+	if c.ClientID == "" {
+		if clientID, err := lemon.LoadOrCreateClientID(); err == nil {
+			c.ClientID = clientID
+		}
 	}
 
 	lc := client.New(c, logger)
