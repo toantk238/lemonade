@@ -82,6 +82,7 @@ func (c *CLI) flags() *flag.FlagSet {
 	flags.DurationVar(&c.ImageCacheTTL, "image-cache-ttl", 30*time.Minute, "Server-side file cache TTL")
 	flags.DurationVar(&c.Timeout, "rpc-timeout", 100*time.Millisecond, "RPC timeout")
 	flags.IntVar(&c.LogLevel, "log-level", 1, "Log level")
+	flags.StringVar(&c.ClientID, "client-id", "", "Persistent client UUID (managed automatically)")
 	return flags
 }
 
