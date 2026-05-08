@@ -10,8 +10,8 @@ var Version string
 var Usage = fmt.Sprintf(`Usage: lemonade [options]... SUB_COMMAND [arg]
 Sub Commands:
   open [URL]                  Open URL by browser
-  copy [text]                 Copy text.
-  paste                       Paste text.
+  copy [text]                 Copy text or file (auto-detected from stdin).
+  paste                       Paste text or file path.
   server                      Start lemonade server.
 
 Options:
@@ -21,6 +21,7 @@ Options:
   --host="localhost"          Destination hostname          [Client only]
   --no-fallback-messages      Do not show fallback messages [Client only]
   --trim-newline              Trim trailing newline from stdin input [copy only]
+  --image-cache-ttl=30m       File cache TTL on server      [Server only]
   --trans-loopback=true       Translate loopback address    [open subcommand only]
   --trans-localfile=true      Translate local file path     [open subcommand only]
   --log-level=1               Log level                     [4 = Critical, 0 = Debug]
