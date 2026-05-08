@@ -27,17 +27,18 @@ Extend lemonade's `copy`/`paste` commands to support files (images and any file 
 The feature adds a parallel RPC path for files alongside the existing text path. No existing text behavior is modified.
 
 ```
-Client (copy)          Server              Client (paste)
-     │                    │                     │
-     │─ CopyFile([]File) ─▶│                     │
-     │                    │ store in memory      │
-     │                    │ start TTL timer      │
-     │                    │                     │
-     │                    │◀─ PasteFile() ───────│
-     │                    │ compare IPs          │
-     │                    │─ {SameClient:true} ──▶│ (no-op)
-     │                    │   OR                 │
-     │                    │─ {Files:[...]} ───────▶│ save to /tmp, print paths
+Client (copy)               Server              Client (paste)
+     │                         │                     │
+     │─ CopyFile(clientID) ───▶│                     │
+     │                         │ store in memory      │
+     │                         │ store clientID       │
+     │                         │ start TTL timer      │
+     │                         │                     │
+     │                         │◀─ PasteFile(clientID)│
+     │                         │ compare clientIDs    │
+     │                         │─ {SameClient:true} ──▶│ (no-op)
+     │                         │   OR                 │
+     │                         │─ {Files:[...]} ───────▶│ save to /tmp, print paths
 ```
 
 ## New Types (`param` package)
@@ -49,7 +50,12 @@ type FileEntry struct {
 }
 
 type CopyFileParam struct {
-    Files []FileEntry
+    Files    []FileEntry
+    ClientID string  // persistent UUID identifying the source machine
+}
+
+type PasteFileParam struct {
+    ClientID string  // persistent UUID of the requesting machine
 }
 
 type PasteFileResult struct {
@@ -62,19 +68,19 @@ type PasteFileResult struct {
 
 ```go
 type imageCache struct {
-    mu        sync.Mutex
-    files     []FileEntry
-    sourceIP  string
-    expiresAt time.Time
-    timer     *time.Timer
+    mu             sync.Mutex
+    files          []FileEntry
+    sourceClientID string
+    expiresAt      time.Time
+    timer          *time.Timer
 }
 ```
 
-- `CopyFile`: acquires lock, cancels existing timer, stores files + sourceIP, starts TTL timer.
-- TTL fires: clears files and sourceIP from memory.
-- `PasteFile`: checks expiry, compares `conn.RemoteAddr()` IP to `sourceIP`.
-  - Same IP → returns `{SameClient: true}` with no bytes.
-  - Different IP → returns full `PasteFileResult` with file bytes.
+- `CopyFile`: acquires lock, cancels existing timer, stores files + `ClientID` from param, starts TTL timer.
+- TTL fires: clears files and `sourceClientID` from memory.
+- `PasteFile`: checks expiry, compares `param.ClientID` to `sourceClientID`.
+  - Same ID → returns `{SameClient: true}` with no bytes.
+  - Different ID → returns full `PasteFileResult` with file bytes.
   - Cache empty/expired → returns empty result (client falls through to text paste).
 - Default TTL: 30 minutes. Configurable via `--image-cache-ttl` flag (Go duration string).
 - Multiple clients can paste from the same cache entry (cache is not cleared on paste).
@@ -122,10 +128,15 @@ call PasteFile RPC
 ## CLI Changes
 
 ### `lemon/cli.go`
-Add field: `ImageCacheTTL time.Duration`
+Add fields:
+- `ImageCacheTTL time.Duration`
+- `ClientID string`
 
 ### `lemon/flag.go`
 Add flag: `--image-cache-ttl=30m`
+
+### `~/.config/lemonade.toml`
+`client-id` is generated as a UUID on first run and persisted. All subsequent runs load it from config. The user never needs to set it manually.
 
 ### `lemon/main.go`
 - `copy`: detect stdin vs no-stdin, route to file or text path
@@ -133,9 +144,9 @@ Add flag: `--image-cache-ttl=30m`
 
 ## Same-Machine Detection
 
-The server compares `conn.RemoteAddr().(*net.TCPAddr).IP.String()` at paste time against the IP recorded at copy time.
+The client sends a persistent `ClientID` (UUID) with every `CopyFile` and `PasteFile` RPC call. The server compares `sourceClientID == requesterClientID` to determine if the paste requester is the same machine that issued the copy.
 
-**Known limitation:** Through SSH port forwarding (`ssh -R`), all clients appear as `127.0.0.1`. Two different physical machines tunneling through the same SSH session cannot be distinguished by IP. In this scenario, the second client's paste will incorrectly return `SameClient: true`. This is an accepted limitation; users with multiple clients over SSH should use direct TCP connections.
+The UUID is generated once on first run and stored in `~/.config/lemonade.toml` under `client-id`. This correctly identifies the same physical machine across SSH tunnels, where all clients would otherwise appear as `127.0.0.1`.
 
 ## Dependencies
 
@@ -157,9 +168,9 @@ Use the existing `log15` logger (already in use throughout the codebase) at appr
 | Copy: detected file URIs from clipboard | Debug | `"copy: detected file URIs from clipboard" "count" 3` |
 | Copy: reading file from URI | Debug | `"copy: reading file" "path" "/home/user/photo.png" "size" 204800` |
 | Copy: sending files over RPC | Info | `"copy: sending files" "count" 3 "total_bytes" 512000` |
-| Server: received CopyFile | Info | `"server: cached files" "count" 3 "source_ip" "192.168.1.5" "ttl" "30m0s"` |
+| Server: received CopyFile | Info | `"server: cached files" "count" 3 "client_id" "a1b2c3" "ttl" "30m0s"` |
 | Server: cache expired | Debug | `"server: image cache expired"` |
-| Paste: SameClient detected | Debug | `"paste: same client, skipping transfer" "ip" "192.168.1.5"` |
+| Paste: SameClient detected | Debug | `"paste: same client, skipping transfer" "client_id" "a1b2c3"` |
 | Paste: transferring files | Info | `"paste: receiving files" "count" 3` |
 | Paste: file saved | Debug | `"paste: saved file" "path" "/tmp/photo.png"` |
 | Paste: cache empty/expired | Debug | `"paste: no file cache, falling back to text"` |
@@ -170,9 +181,10 @@ Log level follows the existing `--log-level` flag (0=Debug, 4=Critical).
 
 - Unit test: magic byte detection covers all 5 formats + non-image fallback
 - Unit test: `imageCache` TTL expiry clears files
-- Unit test: `PasteFile` returns `SameClient: true` when IPs match
-- Unit test: `PasteFile` returns bytes when IPs differ
+- Unit test: `PasteFile` returns `SameClient: true` when client IDs match
+- Unit test: `PasteFile` returns bytes when client IDs differ
 - Unit test: multiple paste calls on same cache entry all succeed
-- Integration test: copy via stdin → paste on same host (SameClient path)
-- Integration test: copy via stdin → paste from different IP (transfer path)
+- Unit test: `client-id` is generated and persisted on first run, reused on subsequent runs
+- Integration test: copy via stdin → paste with same client ID (SameClient path)
+- Integration test: copy via stdin → paste with different client ID (transfer path)
 - Integration test: multiple files → paste outputs one path per line
