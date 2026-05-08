@@ -116,6 +116,27 @@ func (c *client) Copy(text string) error {
 	})
 }
 
+func (c *client) CopyFile(files []param.FileEntry, clientID string) error {
+	totalBytes := 0
+	for _, f := range files {
+		totalBytes += len(f.Bytes)
+	}
+	c.logger.Info("copy: sending files", "count", len(files), "total_bytes", totalBytes)
+	return c.withRPCClient(func(rc *rpc.Client) error {
+		p := param.CopyFileParam{Files: files, ClientID: clientID}
+		return rc.Call("Clipboard.CopyFile", p, &struct{}{})
+	})
+}
+
+func (c *client) PasteFile(clientID string) ([]param.FileEntry, bool, error) {
+	var resp param.PasteFileResult
+	err := c.withRPCClient(func(rc *rpc.Client) error {
+		p := param.PasteFileParam{ClientID: clientID}
+		return rc.Call("Clipboard.PasteFile", p, &resp)
+	})
+	return resp.Files, resp.SameClient, err
+}
+
 func (c *client) withRPCClient(f func(*rpc.Client) error) error {
 	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", c.host, c.port), c.timeout)
 	if err != nil {
