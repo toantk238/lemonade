@@ -22,6 +22,9 @@ func Serve(c *lemon.CLI, logger log.Logger) error {
 	port := c.Port
 	allowIP := c.Allow
 	LineEndingOpt = c.LineEnding
+	if c.ImageCacheTTL > 0 {
+		globalFileCache.ttl = c.ImageCacheTTL
+	}
 	ra, err := iprange.New(allowIP)
 	if err != nil {
 		return err

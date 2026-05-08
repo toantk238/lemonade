@@ -50,4 +50,7 @@ type CLI struct {
 
 	NoFallbackMessages bool
 	TrimNewline        bool
+	StdinIsTTY         bool
+	ImageCacheTTL      time.Duration
+	ClientID           string
 }
