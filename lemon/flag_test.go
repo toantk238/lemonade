@@ -10,10 +10,14 @@ import (
 
 func TestCLIParse(t *testing.T) {
 	defaultTimeout := 100 * time.Millisecond
+	const defaultCacheTTL = 30 * time.Minute
 	assert := func(args []string, expected CLI) {
 		expected.In = os.Stdin
 		if expected.Timeout == 0 {
 			expected.Timeout = defaultTimeout
+		}
+		if expected.ImageCacheTTL == 0 {
+			expected.ImageCacheTTL = defaultCacheTTL
 		}
 		c := &CLI{In: os.Stdin}
 		c.FlagParse(args, true)

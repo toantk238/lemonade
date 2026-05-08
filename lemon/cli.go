@@ -35,6 +35,8 @@ type CLI struct {
 
 	Type       CommandType
 	DataSource string
+	RawData    []byte // set when stdin contains binary file data
+	IsFileData bool   // true when RawData is populated from stdin
 
 	// options
 	Port           int

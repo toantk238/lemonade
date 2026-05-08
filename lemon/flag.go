@@ -79,6 +79,7 @@ func (c *CLI) flags() *flag.FlagSet {
 	flags.StringVar(&c.LineEnding, "line-ending", "", "Convert Line Endings (CR/CRLF)")
 	flags.BoolVar(&c.NoFallbackMessages, "no-fallback-messages", false, "Do not show fallback messages")
 	flags.BoolVar(&c.TrimNewline, "trim-newline", false, "Trim trailing newline from stdin input")
+	flags.DurationVar(&c.ImageCacheTTL, "image-cache-ttl", 30*time.Minute, "Server-side file cache TTL")
 	flags.DurationVar(&c.Timeout, "rpc-timeout", 100*time.Millisecond, "RPC timeout")
 	flags.IntVar(&c.LogLevel, "log-level", 1, "Log level")
 	return flags
@@ -118,14 +119,21 @@ func (c *CLI) parse(args []string, skip bool) error {
 
 	if arg != "" {
 		c.DataSource = arg
+	} else if c.StdinIsTTY {
+		// stdin is a terminal — no piped data; Nautilus path handled in main.go
 	} else {
 		b, err := ioutil.ReadAll(c.In)
 		if err != nil {
 			return err
 		}
-		c.DataSource = string(b)
-		if c.TrimNewline {
-			c.DataSource = strings.TrimSuffix(c.DataSource, "\n")
+		if _, ok := DetectFileExt(b); ok {
+			c.RawData = b
+			c.IsFileData = true
+		} else {
+			c.DataSource = string(b)
+			if c.TrimNewline {
+				c.DataSource = strings.TrimSuffix(c.DataSource, "\n")
+			}
 		}
 	}
 
