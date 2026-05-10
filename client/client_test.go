@@ -1,7 +1,6 @@
 package client
 
 import (
-	"os"
 	"testing"
 	"time"
 
@@ -44,6 +43,3 @@ func TestClientNewEnvUsedWhenFlagEmpty(t *testing.T) {
 		t.Errorf("expected clientID %q, got %q", "env-id", cl.clientID)
 	}
 }
-
-// Ensure os is imported (used indirectly via lemon.LoadOrCreateClientID path)
-var _ = os.Getenv
