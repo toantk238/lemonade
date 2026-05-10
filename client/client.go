@@ -23,9 +23,14 @@ type client struct {
 	noFallbackMessages bool
 	logger             log.Logger
 	timeout            time.Duration
+	clientID           string
 }
 
 func New(c *lemon.CLI, logger log.Logger) *client {
+	clientID := os.Getenv("LEMONADE_CLIENT_ID")
+	if clientID == "" {
+		clientID, _ = lemon.LoadOrCreateClientID()
+	}
 	return &client{
 		host:               c.Host,
 		port:               c.Port,
@@ -33,6 +38,7 @@ func New(c *lemon.CLI, logger log.Logger) *client {
 		noFallbackMessages: c.NoFallbackMessages,
 		logger:             logger,
 		timeout:            c.Timeout,
+		clientID:           clientID,
 	}
 }
 
@@ -116,22 +122,22 @@ func (c *client) Copy(text string) error {
 	})
 }
 
-func (c *client) CopyFile(files []param.FileEntry, clientID string) error {
+func (c *client) CopyFile(files []param.FileEntry) error {
 	totalBytes := 0
 	for _, f := range files {
 		totalBytes += len(f.Bytes)
 	}
 	c.logger.Info("copy: sending files", "count", len(files), "total_bytes", totalBytes)
 	return c.withRPCClient(func(rc *rpc.Client) error {
-		p := param.CopyFileParam{Files: files, ClientID: clientID}
+		p := param.CopyFileParam{Files: files, ClientID: c.clientID}
 		return rc.Call("Clipboard.CopyFile", p, &struct{}{})
 	})
 }
 
-func (c *client) PasteFile(clientID string) ([]param.FileEntry, bool, error) {
+func (c *client) PasteFile() ([]param.FileEntry, bool, error) {
 	var resp param.PasteFileResult
 	err := c.withRPCClient(func(rc *rpc.Client) error {
-		p := param.PasteFileParam{ClientID: clientID}
+		p := param.PasteFileParam{ClientID: c.clientID}
 		return rc.Call("Clipboard.PasteFile", p, &resp)
 	})
 	return resp.Files, resp.SameClient, err
