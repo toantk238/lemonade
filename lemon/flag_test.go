@@ -210,6 +210,18 @@ func TestCLIParse(t *testing.T) {
 		NoFallbackMessages: true,
 		LogLevel:           defaultLogLevel,
 	})
+
+	assert([]string{"lemonade", "copy", "--client-id", "test-uuid-1234", "hello"}, CLI{
+		Type:           COPY,
+		Host:           defaultHost,
+		Port:           defaultPort,
+		Allow:          defaultAllow,
+		DataSource:     "hello",
+		ClientID:       "test-uuid-1234",
+		TransLoopback:  true,
+		TransLocalfile: true,
+		LogLevel:       defaultLogLevel,
+	})
 }
 
 func TestCopyStdinTrimNewline(t *testing.T) {

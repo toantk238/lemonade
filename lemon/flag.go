@@ -80,6 +80,7 @@ func (c *CLI) flags() *flag.FlagSet {
 	flags.BoolVar(&c.NoFallbackMessages, "no-fallback-messages", false, "Do not show fallback messages")
 	flags.BoolVar(&c.TrimNewline, "trim-newline", false, "Trim trailing newline from stdin input")
 	flags.DurationVar(&c.ImageCacheTTL, "image-cache-ttl", 30*time.Minute, "Server-side file cache TTL")
+	flags.StringVar(&c.ClientID, "client-id", "", "Override client ID (client commands only)")
 	flags.DurationVar(&c.Timeout, "rpc-timeout", 100*time.Millisecond, "RPC timeout")
 	flags.IntVar(&c.LogLevel, "log-level", 1, "Log level")
 	return flags

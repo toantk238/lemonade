@@ -54,4 +54,5 @@ type CLI struct {
 	TrimNewline        bool
 	StdinIsTTY         bool
 	ImageCacheTTL      time.Duration
+	ClientID           string
 }
