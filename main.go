@@ -66,15 +66,16 @@ func Do(c *lemon.CLI, args []string) int {
 		return lemon.Help
 	}
 
-	lc := client.New(c, logger)
 	var err error
 
 	switch c.Type {
 	case lemon.OPEN:
+		lc := client.New(c, logger)
 		logger.Debug("Opening URL")
 		err = lc.Open(c.DataSource, c.TransLocalfile, c.TransLoopback)
 
 	case lemon.COPY:
+		lc := client.New(c, logger)
 		if c.IsFileData {
 			ext, _ := lemon.DetectFileExt(c.RawData)
 			logger.Debug("copy: detected image from stdin", "ext", ext, "size", len(c.RawData))
@@ -97,6 +98,7 @@ func Do(c *lemon.CLI, args []string) int {
 		}
 
 	case lemon.PASTE:
+		lc := client.New(c, logger)
 		logger.Debug("Pasting")
 		var handled bool
 		var files []param.FileEntry
