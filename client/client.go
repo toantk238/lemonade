@@ -27,7 +27,10 @@ type client struct {
 }
 
 func New(c *lemon.CLI, logger log.Logger) *client {
-	clientID := os.Getenv("LEMONADE_CLIENT_ID")
+	clientID := c.ClientID
+	if clientID == "" {
+		clientID = os.Getenv("LEMONADE_CLIENT_ID")
+	}
 	if clientID == "" {
 		clientID, _ = lemon.LoadOrCreateClientID()
 	}
