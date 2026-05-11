@@ -50,6 +50,7 @@ func handleClipboardChange(logger log.Logger) {
 		logger.Info("server: watcher cached files from clipboard", "count", len(entries))
 		globalFileCache.store(entries, "")
 	} else {
+		logger.Debug("server: watcher clipboard has no file URIs, clearing cache")
 		globalFileCache.clear()
 	}
 }
@@ -99,6 +100,7 @@ func watchWaylandPoll(logger log.Logger) {
 		h := sha256.Sum256(out)
 		if h != lastHash {
 			lastHash = h
+			logger.Debug("server: Wayland poll detected clipboard change")
 			handleClipboardChange(logger)
 		}
 	}
