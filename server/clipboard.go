@@ -15,6 +15,7 @@ const clipboardTimeout = 200 * time.Millisecond
 
 func (_ *Clipboard) Copy(text string, _ *struct{}) error {
 	<-connCh
+	globalFileCache.clear()
 	text = lemon.ConvertLineEnding(text, LineEndingOpt)
 
 	done := make(chan error, 1)
@@ -74,6 +75,17 @@ func (fc *fileCache) store(files []param.FileEntry, clientID string) {
 		fc.sourceClientID = ""
 		serverLogger.Debug("server: image cache expired")
 	})
+}
+
+func (fc *fileCache) clear() {
+	fc.mu.Lock()
+	defer fc.mu.Unlock()
+	if fc.timer != nil {
+		fc.timer.Stop()
+		fc.timer = nil
+	}
+	fc.files = nil
+	fc.sourceClientID = ""
 }
 
 // get returns (files, sameClient, hasData).

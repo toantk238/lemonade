@@ -156,6 +156,7 @@ func (c *client) withRPCClient(f func(*rpc.Client) error) error {
 		conn, err = c.fallbackLocal()
 	}
 	rc := rpc.NewClient(conn)
+	defer rc.Close()
 	return f(rc)
 }
 
