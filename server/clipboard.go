@@ -37,8 +37,11 @@ func (_ *Clipboard) Copy(text string, _ *struct{}) error {
 }
 
 func (_ *Clipboard) Paste(_ struct{}, resp *string) error {
+	serverLogger.Debug("server: Paste waiting for connCh")
 	<-connCh
+	serverLogger.Debug("server: Paste calling clipboard.ReadAll")
 	t, err := clipboard.ReadAll()
+	serverLogger.Debug("server: Paste clipboard.ReadAll done", "err", err)
 	*resp = t
 	return err
 }
@@ -111,7 +114,9 @@ func (_ *Clipboard) CopyFile(p param.CopyFileParam, _ *struct{}) error {
 }
 
 func (_ *Clipboard) PasteFile(p param.PasteFileParam, resp *param.PasteFileResult) error {
+	serverLogger.Debug("server: PasteFile waiting for connCh")
 	<-connCh
+	serverLogger.Debug("server: PasteFile got connCh")
 	files, sameClient, hasData := globalFileCache.get(p.ClientID)
 	if !hasData {
 		serverLogger.Debug("server: no file cache, falling back to text")

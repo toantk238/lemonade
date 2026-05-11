@@ -50,7 +50,9 @@ func Serve(c *lemon.CLI, logger log.Logger) error {
 			continue
 		}
 		connCh <- conn
+		logger.Debug("server: starting ServeConn", "remote", conn.RemoteAddr())
 		rpc.ServeConn(conn)
+		logger.Debug("server: ServeConn done", "remote", conn.RemoteAddr())
 	}
 }
 

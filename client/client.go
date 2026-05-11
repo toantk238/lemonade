@@ -147,7 +147,9 @@ func (c *client) PasteFile() ([]param.FileEntry, bool, error) {
 }
 
 func (c *client) withRPCClient(f func(*rpc.Client) error) error {
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", c.host, c.port), c.timeout)
+	addr := fmt.Sprintf("%s:%d", c.host, c.port)
+	c.logger.Debug("client: dialing", "addr", addr)
+	conn, err := net.DialTimeout("tcp", addr, c.timeout)
 	if err != nil {
 		if !c.noFallbackMessages {
 			c.logger.Error(err.Error())
@@ -155,9 +157,18 @@ func (c *client) withRPCClient(f func(*rpc.Client) error) error {
 		}
 		conn, err = c.fallbackLocal()
 	}
+	if err != nil {
+		return err
+	}
+	c.logger.Debug("client: dial ok", "local", conn.LocalAddr(), "remote", conn.RemoteAddr())
 	rc := rpc.NewClient(conn)
-	defer rc.Close()
-	return f(rc)
+	defer func() {
+		c.logger.Debug("client: closing connection", "remote", conn.RemoteAddr())
+		rc.Close()
+	}()
+	err = f(rc)
+	c.logger.Debug("client: RPC call done", "err", err)
+	return err
 }
 
 func (c *client) fallbackLocal() (net.Conn, error) {
