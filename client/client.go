@@ -99,14 +99,28 @@ func (c *client) Open(uri string, transLocalfile, transLoopback bool) error {
 func (c *client) Paste() (string, error) {
 	var resp string
 
+	c.logger.Debug("Paste: calling RPC Clipboard.Paste")
 	err := c.withRPCClient(func(rc *rpc.Client) error {
 		return rc.Call("Clipboard.Paste", dummy, &resp)
 	})
 	if err != nil {
+		c.logger.Error("Paste: RPC error", "err", err)
 		return "", err
 	}
 
-	return lemon.ConvertLineEnding(resp, c.lineEnding), nil
+	c.logger.Debug("Paste: received from server", "len", len(resp), "preview", truncateClient(resp, 120))
+	result := lemon.ConvertLineEnding(resp, c.lineEnding)
+	if result != resp {
+		c.logger.Debug("Paste: after line-ending conversion", "preview", truncateClient(result, 120))
+	}
+	return result, nil
+}
+
+func truncateClient(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "…"
 }
 
 func (c *client) Copy(text string) error {
