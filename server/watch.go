@@ -67,6 +67,7 @@ func watchWayland(logger log.Logger) {
 		handleClipboardChange(logger)
 	}
 	cmd.Wait()
+	logger.Warn("server: wl-paste --watch exited, clipboard watcher stopped")
 }
 
 // watchX11 loops xclip -l 1, which blocks until exactly one clipboard change,
@@ -74,7 +75,7 @@ func watchWayland(logger log.Logger) {
 func watchX11(logger log.Logger) {
 	for {
 		if err := exec.Command("xclip", "-l", "1").Run(); err != nil {
-			logger.Debug("server: xclip watch stopped", "err", err)
+			logger.Warn("server: xclip watch stopped", "err", err)
 			return
 		}
 		handleClipboardChange(logger)
