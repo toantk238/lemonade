@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"crypto/sha256"
+	"os"
 	"os/exec"
 	"time"
 
@@ -15,10 +16,12 @@ import (
 // an event-driven or polling watcher that updates globalFileCache on change.
 // Returns immediately if no clipboard tool is available (e.g. headless server).
 func StartClipboardWatcher(logger log.Logger) {
-	if _, err := exec.LookPath("wl-paste"); err == nil {
-		logger.Debug("server: starting Wayland clipboard watcher")
-		watchWayland(logger)
-		return
+	if os.Getenv("WAYLAND_DISPLAY") != "" {
+		if _, err := exec.LookPath("wl-paste"); err == nil {
+			logger.Debug("server: starting Wayland clipboard watcher")
+			watchWayland(logger)
+			return
+		}
 	}
 	if _, err := exec.LookPath("xclip"); err == nil {
 		logger.Debug("server: starting X11 clipboard watcher")
