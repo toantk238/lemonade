@@ -2,6 +2,7 @@ package server
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/sha256"
 	"os"
 	"os/exec"
@@ -61,6 +62,8 @@ func watchWayland(logger log.Logger) {
 		logger.Error("server: wl-paste stdout pipe failed", "err", err)
 		return
 	}
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = &stderrBuf
 	if err := cmd.Start(); err != nil {
 		logger.Error("server: wl-paste --watch start failed", "err", err)
 		return
@@ -69,8 +72,9 @@ func watchWayland(logger log.Logger) {
 	for scanner.Scan() {
 		handleClipboardChange(logger)
 	}
-	cmd.Wait()
-	logger.Warn("server: wl-paste --watch exited, clipboard watcher stopped")
+	waitErr := cmd.Wait()
+	logger.Warn("server: wl-paste --watch exited, clipboard watcher stopped",
+		"err", waitErr, "stderr", stderrBuf.String())
 }
 
 // watchX11 loops xclip -l 1, which blocks until exactly one clipboard change,
