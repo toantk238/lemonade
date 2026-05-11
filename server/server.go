@@ -39,6 +39,8 @@ func Serve(c *lemon.CLI, logger log.Logger) error {
 		return err
 	}
 
+	go StartClipboardWatcher(logger)
+
 	for {
 		conn, err := l.Accept()
 		if err != nil {
