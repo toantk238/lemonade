@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	log "github.com/inconshreveable/log15"
@@ -73,8 +74,34 @@ func watchWayland(logger log.Logger) {
 		handleClipboardChange(logger)
 	}
 	waitErr := cmd.Wait()
+	stderr := stderrBuf.String()
+	if strings.Contains(stderr, "data-control") {
+		// Compositor (e.g. GNOME/Mutter) lacks wlr-data-control; fall back to polling.
+		logger.Debug("server: compositor lacks data-control protocol, falling back to Wayland polling")
+		watchWaylandPoll(logger)
+		return
+	}
 	logger.Warn("server: wl-paste --watch exited, clipboard watcher stopped",
-		"err", waitErr, "stderr", stderrBuf.String())
+		"err", waitErr, "stderr", stderr)
+}
+
+// watchWaylandPoll polls wl-paste every 500ms for compositors that lack the
+// data-control protocol (e.g. GNOME/Mutter). Detects file URI changes and
+// clears the cache when text is copied.
+func watchWaylandPoll(logger log.Logger) {
+	logger.Info("server: starting Wayland polling clipboard watcher (500ms)")
+	var lastHash [32]byte
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for range ticker.C {
+		// Poll for file URIs; empty output means text was copied or clipboard is clear.
+		out, _ := exec.Command("wl-paste", "--no-newline", "-t", "text/uri-list").Output()
+		h := sha256.Sum256(out)
+		if h != lastHash {
+			lastHash = h
+			handleClipboardChange(logger)
+		}
+	}
 }
 
 // watchX11 loops xclip -l 1, which blocks until exactly one clipboard change,
