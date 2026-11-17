@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -23,6 +24,16 @@ func (_ *Clipboard) Copy(text string, _ *struct{}) error {
 
 	if lemon.IsWSL() {
 		return wslCopy(text)
+	}
+
+	if useWayland() {
+		err := waylandCopy(text)
+		if err != nil {
+			serverLogger.Error("clipboard write error", "err", err)
+		} else {
+			serverLogger.Debug("Copy written to clipboard", "len", len(text))
+		}
+		return err
 	}
 
 	done := make(chan error, 1)
@@ -81,6 +92,26 @@ func wslCopy(text string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), wslClipboardTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "clip.exe")
+	cmd.Stdin = bytes.NewBufferString(text)
+	return cmd.Run()
+}
+
+// useWayland reports whether copies should go through wl-copy directly.
+func useWayland() bool {
+	if os.Getenv("WAYLAND_DISPLAY") == "" {
+		return false
+	}
+	_, err := exec.LookPath("wl-copy")
+	return err == nil
+}
+
+// waylandCopy runs wl-copy with an explicit text MIME type. Without --type,
+// wl-copy guesses the type from the content (e.g. a PEM private key becomes
+// application/pkcs8+pem only), and apps asking for text then paste nothing.
+func waylandCopy(text string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), wslClipboardTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "wl-copy", "--type", "text/plain;charset=utf-8")
 	cmd.Stdin = bytes.NewBufferString(text)
 	return cmd.Run()
 }
